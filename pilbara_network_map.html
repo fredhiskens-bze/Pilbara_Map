@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pilbara Transmission Network Map</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────── */
+    #sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 1001;
+    }
+
+    #sidebar-header {
+      padding: 20px 16px 14px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    #sidebar-header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #58a6ff;
+      line-height: 1.3;
+    }
+
+    #sidebar-header p {
+      font-size: 11px;
+      color: #6e7681;
+      margin-top: 3px;
+    }
+
+    .sidebar-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .sidebar-section h3 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7681;
+      margin-bottom: 10px;
+    }
+
+    /* Owner toggles */
+    .owner-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .owner-item:hover { background: #21262d; }
+
+    .owner-swatch {
+      width: 24px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+
+    .owner-label {
+      font-size: 12px;
+      color: #c9d1d9;
+      flex: 1;
+      transition: color 0.2s;
+    }
+
+    .owner-count {
+      font-size: 10px;
+      color: #6e7681;
+      background: #21262d;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    .owner-item.hidden .owner-swatch { opacity: 0.2; }
+    .owner-item.hidden .owner-label  { color: #484f58; }
+
+    /* Node type legend */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .legend-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 2px solid #6e7681;
+      background: #21262d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .legend-label {
+      font-size: 12px;
+      color: #c9d1d9;
+    }
+
+    .legend-note {
+      font-size: 10px;
+      color: #484f58;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* Basemap switcher */
+    .basemap-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #8b949e;
+      font-size: 11px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .basemap-btn:hover       { background: #30363d; color: #c9d1d9; }
+    .basemap-btn.active      { background: #0d419d22; border-color: #58a6ff88; color: #58a6ff; }
+
+    /* Color note */
+    #color-note {
+      padding: 12px 16px;
+      font-size: 10px;
+      color: #484f58;
+      line-height: 1.5;
+      font-style: italic;
+      border-bottom: 1px solid #30363d;
+    }
+
+    /* ── Map ───────────────────────────────────────────────── */
+    #map { flex: 1; }
+
+    /* ── Info Panel ────────────────────────────────────────── */
+    #info-panel {
+      width: 0;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      overflow: hidden;
+      transition: width 0.25s ease;
+      z-index: 1001;
+      position: relative;
+    }
+
+    #info-panel.open {
+      width: 280px;
+      min-width: 280px;
+    }
+
+    #info-panel-inner {
+      width: 280px;
+      height: 100%;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    #info-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #6e7681;
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      z-index: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    #info-close:hover { color: #e6edf3; background: #21262d; }
+
+    #info-panel-inner h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 6px;
+      padding-right: 24px;
+      line-height: 1.4;
+    }
+
+    .info-owner-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 2px 9px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .info-type-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 14px;
+    }
+
+    .type-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+    }
+
+    .info-divider {
+      border: none;
+      border-top: 1px solid #21262d;
+      margin: 10px 0;
+    }
+
+    .info-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px solid #1c2128;
+      font-size: 12px;
+      gap: 8px;
+    }
+    .info-detail-row:last-child { border-bottom: none; }
+
+    .detail-key   { color: #6e7681; white-space: nowrap; }
+    .detail-value { color: #e6edf3; text-align: right; }
+
+    .info-notes {
+      margin-top: 12px;
+      font-size: 11px;
+      color: #6e7681;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    /* ── Leaflet overrides ─────────────────────────────────── */
+    .leaflet-control-zoom a {
+      background: #21262d !important;
+      color: #c9d1d9 !important;
+      border-color: #30363d !important;
+    }
+    .leaflet-control-zoom a:hover { background: #30363d !important; }
+
+    .leaflet-control-attribution {
+      background: rgba(13,17,23,0.7) !important;
+      color: #484f58 !important;
+      font-size: 9px !important;
+    }
+    .leaflet-control-attribution a { color: #6e7681 !important; }
+
+    /* Custom tooltip */
+    .leaflet-tooltip.node-hover-tip {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 5px;
+      color: #e6edf3;
+      font-size: 12px;
+      padding: 6px 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .leaflet-tooltip.node-hover-tip::before {
+      border-top-color: #30363d !important;
+    }
+    .tip-name   { font-weight: 600; margin-bottom: 2px; }
+    .tip-types  { font-size: 10px; color: #8b949e; }
+    .tip-owner  { font-size: 10px; margin-top: 2px; }
+    .tip-status { font-size: 10px; margin-top: 2px; }
+    .tip-status.built    { color: #3fb950; }
+    .tip-status.proposed { color: #d29922; }
+
+    /* Line legend */
+    .line-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+    }
+    .line-swatch {
+      width: 32px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .line-legend-label { font-size: 11px; color: #c9d1d9; }
+
+    /* Permanent node labels */
+    .leaflet-tooltip.node-label {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-size: 10px;
+      font-weight: 600;
+      color: #e6edf3;
+      text-shadow: 0 1px 4px #000, 0 0 8px #000;
+      white-space: nowrap;
+      pointer-events: none;
+      padding: 0;
+    }
+    .leaflet-tooltip.node-label::before { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+<div id="sidebar">
+
+  <div id="sidebar-header">
+    <h1>Pilbara Transmission<br>Network Map</h1>
+    <p>v0.1 — Fortescue pilot</p>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Networks</h3>
+    <div id="owner-list"></div>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Node Types</h3>
+    <div id="type-legend"></div>
+    <p class="legend-note">Nodes with multiple roles show combined icons inside the circle.</p>
+    <div class="legend-item" style="margin-top:8px;">
+      <div class="legend-circle" style="border-style:dashed;">
+        <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="none" stroke="#6e7681" stroke-width="1.5" stroke-dasharray="2 2"/></svg>
+      </div>
+      <span class="legend-label" style="color:#8b949e;">Proposed node</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Line Types</h3>
+    <!-- Voltage weights -->
+    <div class="line-legend-item">
+      <div class="line-swatch">
+        <svg width="32" height="12"><line x1="0" y1="6" x2="32" y2="6" stroke="#8b949e" stroke-width="5.5"/></svg>
+      </div>
+      <span class="line-legend-label">330 kV</span>
+    </div>
+    <div class="line-legend-item">
+      <div class="line-swatch">
+        <svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#8b949e" stroke-width="3.5"/></svg>
+      </div>
+      <span class="line-legend-label">220 kV</span>
+    </div>
+    <div class="line-legend-item">
+      <div class="line-swatch">
+        <svg width="32" height="8"><line x1="0" y1="4" x2="32" y2="4" stroke="#8b949e" stroke-width="2.5"/></svg>
+      </div>
+      <span class="line-legend-label">132 kV</span>
+    </div>
+    <div class="line-legend-item">
+      <div class="line-swatch">
+        <svg width="32" height="6"><line x1="0" y1="3" x2="32" y2="3" stroke="#8b949e" stroke-width="1.5"/></svg>
+      </div>
+      <span class="line-legend-label">66 kV</span>
+    </div>
+    <!-- Circuit type -->
+    <div class="line-legend-item" style="margin-top:6px">
+      <div class="line-swatch">
+        <svg width="32" height="12">
+          <line x1="0" y1="3" x2="32" y2="3" stroke="#8b949e" stroke-width="2"/>
+          <line x1="0" y1="9" x2="32" y2="9" stroke="#8b949e" stroke-width="2"/>
+        </svg>
+      </div>
+      <span class="line-legend-label">Double circuit</span>
+    </div>
+    <div class="line-legend-item">
+      <div class="line-swatch">
+        <svg width="32" height="8"><line x1="0" y1="4" x2="32" y2="4" stroke="#8b949e" stroke-width="2" stroke-dasharray="6 4"/></svg>
+      </div>
+      <span class="line-legend-label">Proposed</span>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Basemap</h3>
+    <button class="basemap-btn active" onclick="setBasemap('carto_dark',this)">CartoDB Dark</button>
+    <button class="basemap-btn"        onclick="setBasemap('esri_dark',this)">ESRI Dark Grey</button>
+    <button class="basemap-btn"        onclick="setBasemap('carto_light',this)">CartoDB Light</button>
+    <button class="basemap-btn"        onclick="setBasemap('osm',this)">OpenStreetMap</button>
+  </div>
+
+  <div id="color-note">
+    Owner colours are placeholders — specify hex codes to update them.
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ MAP ═══════════════════════════ -->
+<div id="map"></div>
+
+<!-- ═══════════════════════ INFO PANEL ════════════════════ -->
+<div id="info-panel">
+  <button id="info-close" onclick="closeInfoPanel()">×</button>
+  <div id="info-panel-inner">
+    <div id="info-content"></div>
+  </div>
+</div>
+
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// OWNER DEFINITIONS
+// Colours are placeholders — update hex values when confirmed.
+// ═══════════════════════════════════════════════════════════════════
+const OWNERS = {
+  fortescue:     { name: 'Fortescue',      color: '#00FF00' },
+  western_power: { name: 'Western Power',  color: '#08787F' },
+  apa:           { name: 'APA',            color: '#C8102E' },
+  rio_tinto:     { name: 'Rio Tinto',      color: '#8c189b' },
+  bhp:           { name: 'BHP',            color: '#e35302' },
+  roy_hill:      { name: 'Roy Hill',       color: '#7A5C3A' },
+  areh:          { name: 'Aust. Renewable Energy Hub', color: '#00FFFF' },
+  common:        { name: 'Other',          color: '#444444' },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// NODE TYPE DEFINITIONS  (SVG path data)
+// ═══════════════════════════════════════════════════════════════════
+const NODE_TYPES = {
+  generation: {
+    label: 'Generation',
+    // Lightning bolt
+    path: 'M7 2v11h3v9l7-12h-4l4-8z',
+  },
+  load: {
+    label: 'Load',
+    // Building / facility
+    path: 'M12 3L2 12h3v9h5v-6h4v6h5v-9h3z',
+  },
+  storage: {
+    label: 'Storage',
+    // Battery
+    path: 'M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4zM13 18h-2v-2h2v2zm0-4h-2V9h2v5z',
+  },
+  mine: {
+    label: 'Mine',
+    // Pickaxe: thin bar + open bracket arc (evenodd hollows out the inside of the arc)
+    // Outer shape: bar + large D; inner path: hollow cutout → gives a ---)  look
+    path: 'M2 11 L12 11 L12 6 C26 6 26 18 12 18 L12 13 L2 13 Z M12 9 C20 9 20 15 12 15 Z',
+    fillRule: 'evenodd',
+  },
+};
+
+function makeSvg(path, size, fill, fillRule) {
+  const frAttr = fillRule ? ` fill-rule="${fillRule}"` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" `
+       + `width="${size}" height="${size}"><path d="${path}" fill="${fill}"${frAttr}/></svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NETWORK DATA
+// ─────────────────────────────────────────────────────────────────
+// nodes[]       — each entry is one node on the map
+// connections[] — each entry is one transmission line
+//
+// Node fields:
+//   id      (string)  — unique key
+//   name    (string)  — display name
+//   owner   (string)  — key from OWNERS
+//   types   (array)   — any of: 'generation', 'load', 'storage'
+//   coords  (array)   — [lat, lng]
+//   details (object)  — key/value pairs shown in the info panel
+//   notes   (string)  — optional free-text shown in the info panel
+//
+// Connection fields:
+//   id      (string)  — unique key
+//   from    (string)  — node id
+//   to      (string)  — node id
+//   owner   (string)  — key from OWNERS (determines line colour)
+//   details (object)  — shown in tooltip (future)
+// ═══════════════════════════════════════════════════════════════════
+
+const nodes = [
+
+  // ── COMMON USER ────────────────────────────────────────────────
+  {
+    id:     'port_hedland',
+    name:   'Port Hedland',
+    owner:  'common',
+    types:  ['generation', 'load', 'storage'],
+    coords: [-20.426242, 118.561198],
+    details: { 'Type': 'Regional hub' },
+    notes:  '',
+  },
+
+  // ── FORTESCUE ──────────────────────────────────────────────────
+  {
+    id:     'north_star_junction',
+    name:   'North Star Junction',
+    owner:  'fortescue',
+    types:  ['generation', 'storage'],
+    coords: [-21.237437, 118.802026],
+    details: {},
+    notes:  '',
+  },
+  {
+    id:       'turner_river_solar',
+    name:     'Turner River Solar Hub',
+    owner:    'fortescue',
+    types:    ['generation', 'storage'],
+    coords:   [-21.213553, 118.756069],
+    proposed: true,
+    details:  {},
+    notes:    '',
+  },
+  {
+    id:     'iron_bridge',
+    name:   'Iron Bridge',
+    owner:  'fortescue',
+    types:  ['mine'],
+    coords: [-21.263056, 119.039003],
+    details: { 'Type': 'Mine' },
+    notes:  '',
+  },
+  {
+    id:       'east_pilbara_gen_hub',
+    name:     'East Pilbara Generation Hub',
+    owner:    'fortescue',
+    types:    ['generation', 'storage'],
+    coords:   [-21.463824, 119.973928],
+    proposed: true,
+    details:  {},
+    notes:    '',
+  },
+  {
+    id:     'solomon',
+    name:   'Solomon',
+    owner:  'fortescue',
+    types:  ['mine', 'generation', 'storage'],
+    coords: [-22.147793, 117.954970],
+    details: { 'Type': 'Mine' },
+    notes:  '',
+  },
+  {
+    id:     'eliwana',
+    name:   'Eliwana',
+    owner:  'fortescue',
+    types:  ['mine', 'storage'],
+    coords: [-22.462936, 116.830093],
+    details: { 'Type': 'Mine' },
+    notes:  '',
+  },
+  {
+    id:     'cloudbreak',
+    name:   'Cloudbreak',
+    owner:  'fortescue',
+    types:  ['mine', 'generation', 'storage'],
+    coords: [-22.324786, 119.404231],
+    details: { 'Type': 'Mine' },
+    notes:  '',
+  },
+  {
+    id:     'christmas_creek',
+    name:   'Christmas Creek',
+    owner:  'fortescue',
+    types:  ['mine'],
+    coords: [-22.369, 119.637],   // ⚠ approximate — coordinates not provided
+    details: { 'Type': 'Mine' },
+    notes:  '⚠ Approximate location — exact coordinates to be confirmed.',
+  },
+  {
+    id:       'nullagine_hub',
+    name:     'Nullagine Hub',
+    owner:    'fortescue',
+    types:    ['generation'],
+    coords:   [-22.077843, 119.923195],
+    proposed: true,
+    details:  {},
+    notes:    '',
+  },
+
+  // ── ROY HILL ──────────────────────────────────────────────────
+  {
+    id:     'roy_hill',
+    name:   'Roy Hill',
+    owner:  'roy_hill',
+    types:  ['mine'],
+    coords: [-22.481141, 119.947601],
+    details: { 'Type': 'Mine' },
+    notes:  '',
+  },
+
+  // ── BHP (Newman hub) ──────────────────────────────────────────
+  {
+    id:     'newman',
+    name:   'Newman',
+    owner:  'bhp',
+    types:  ['mine', 'generation', 'storage'],
+    coords: [-23.343639, 119.709618],
+    details: { 'Type': 'Mine / Generation / Storage hub' },
+    notes:  '<strong>Mines</strong><br>Newman services BHP\'s Newman East and Newman West mines, with a combined production capacity of about 78 million tonnes of iron ore per year.<br><br>Newman is also the nearest hub to BHP\'s Jimblebar Mine.<br><br><strong>Generation &amp; Storage</strong><br>Newman is home to gas generation and APA\'s 35 MW / 11 MWh battery.',
+  },
+
+  // ── AREH ──────────────────────────────────────────────────────
+  {
+    id:       'areh',
+    name:     'Australian Renewable Energy Hub',
+    owner:    'areh',
+    types:    ['generation', 'load'],
+    coords:   [-20.285852, 121.171851],
+    proposed: true,
+    details:  {},
+    notes:    '',
+  },
+
+  // ── APA ───────────────────────────────────────────────────────
+  {
+    id:       'newman_reh',
+    name:     'Newman Renewable Energy Hub',
+    owner:    'apa',
+    types:    ['generation', 'storage'],
+    coords:   [-23.510037, 120.055109],
+    proposed: true,
+    details:  {},
+    notes:    '',
+  },
+
+  // ── BHP ───────────────────────────────────────────────────────
+  {
+    id:      'yandicoogina',
+    name:    'Yandicoogina',
+    owner:   'bhp',
+    types:   ['mine'],
+    coords:  [-22.735370, 119.120512],
+    details: { 'Type': 'Mine' },
+    notes:   '<strong>Mines</strong><br>This node services BHP\'s Yandi mine.',
+  },
+  {
+    id:      'hope_downs',
+    name:    'Hope Downs',
+    owner:   'bhp',
+    types:   ['mine'],
+    coords:  [-22.917051, 119.060021],
+    details: { 'Type': 'Mine' },
+    notes:   'Servicing Mining Area C and the South Flank Mine, which together produce 145 million tonnes of iron ore per year.',
+  },
+
+  // ── OTHER ─────────────────────────────────────────────────────
+  {
+    id:      'hemi_gold',
+    name:    'Hemi Gold Project',
+    owner:   'common',
+    types:   ['mine'],
+    coords:  [-20.875390, 118.442949],
+    details: { 'Type': 'Mine' },
+    notes:   '',
+  },
+  {
+    id:      'wallareenya',
+    name:    'Wallareenya Energy Hub',
+    owner:   'common',
+    types:   ['generation'],
+    coords:  [-20.883073, 118.855383],
+    details: {},
+    notes:   '',
+  },
+
+  // ── BHP ───────────────────────────────────────────────────────
+  {
+    id:      'goldsworthy',
+    name:    'Goldsworthy',
+    owner:   'bhp',
+    types:   ['mine'],
+    coords:  [-20.339166, 119.525462],
+    details: { 'Type': 'Mine' },
+    notes:   '',
+  },
+  {
+    id:      'shay_gap',
+    name:    'Shay Gap',
+    owner:   'bhp',
+    types:   ['generation'],
+    coords:  [-20.475095, 120.100325],
+    details: { 'Owner': 'BHP / APA' },
+    notes:   '',
+  },
+
+];
+
+// Connection fields:
+//   from, to  — node ids
+//   owner     — key from OWNERS (sets line colour)
+//   voltage   — kV (number) or null if unknown
+//   circuit   — 'single' | 'double' | null
+//   built     — true = in service (solid); false = proposed (dashed)
+
+const connections = [
+
+  // ── FORTESCUE ─────────────────────────────────────────────────
+  {
+    id: 'hedland_north_star',
+    from: 'port_hedland', to: 'north_star_junction',
+    owner: 'fortescue', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'north_star_iron_bridge',
+    from: 'north_star_junction', to: 'iron_bridge',
+    owner: 'fortescue', voltage: 220, circuit: 'double', built: true,
+  },
+  {
+    id: 'north_star_turner_river',
+    from: 'north_star_junction', to: 'turner_river_solar',
+    owner: 'fortescue', voltage: null, circuit: null, built: false,
+  },
+  {
+    id: 'iron_bridge_east_pilbara',
+    from: 'iron_bridge', to: 'east_pilbara_gen_hub',
+    owner: 'fortescue', voltage: null, circuit: null, built: false,
+  },
+  {
+    id: 'north_star_solomon',
+    from: 'north_star_junction', to: 'solomon',
+    owner: 'fortescue', voltage: 220, circuit: 'double', built: true,
+  },
+  {
+    id: 'solomon_eliwana',
+    from: 'solomon', to: 'eliwana',
+    owner: 'fortescue', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'north_star_cloudbreak',
+    from: 'north_star_junction', to: 'cloudbreak',
+    owner: 'fortescue', voltage: null, circuit: null, built: false,
+  },
+
+  // ── APA ───────────────────────────────────────────────────────
+  {
+    id: 'cloudbreak_christmas_apa',
+    from: 'cloudbreak', to: 'christmas_creek',
+    owner: 'apa', voltage: 220, circuit: 'single', built: true,
+    manualOffset: +0.011,   // offset right so APA and Fortescue lines separate visually
+  },
+
+  // ── FORTESCUE (proposed, same route as APA line above) ────────
+  {
+    id: 'cloudbreak_christmas_ftg',
+    from: 'cloudbreak', to: 'christmas_creek',
+    owner: 'fortescue', voltage: null, circuit: null, built: false,
+    manualOffset: -0.011,   // offset left
+  },
+  {
+    id: 'christmas_nullagine',
+    from: 'christmas_creek', to: 'nullagine_hub',
+    owner: 'fortescue', voltage: null, circuit: null, built: false,
+  },
+
+  // ── APA (southern extension) ───────────────────────────────────
+  {
+    id: 'christmas_roy_hill',
+    from: 'christmas_creek', to: 'roy_hill',
+    owner: 'apa', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'roy_hill_newman',
+    from: 'roy_hill', to: 'newman',
+    owner: 'apa', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'newman_reh',
+    from: 'newman', to: 'newman_reh',
+    owner: 'apa', voltage: null, circuit: null, built: false,
+  },
+
+  // ── AREH ──────────────────────────────────────────────────────
+  {
+    id: 'hedland_areh',
+    from: 'port_hedland', to: 'areh',
+    owner: 'areh', voltage: 330, circuit: null, built: false,
+  },
+
+  // ── APA (Hemi Gold) ───────────────────────────────────────────
+  {
+    id: 'hedland_hemi_gold',
+    from: 'port_hedland', to: 'hemi_gold',
+    owner: 'apa', voltage: 330, circuit: 'double', built: false,
+  },
+
+  // ── OTHER ─────────────────────────────────────────────────────
+  {
+    id: 'hedland_wallareenya',
+    from: 'port_hedland', to: 'wallareenya',
+    owner: 'common', voltage: null, circuit: null, built: false,
+  },
+
+  // ── WESTERN POWER ─────────────────────────────────────────────
+  {
+    id: 'hedland_goldsworthy',
+    from: 'port_hedland', to: 'goldsworthy',
+    owner: 'western_power', voltage: 66, circuit: 'single', built: true,
+  },
+
+  // ── BHP ───────────────────────────────────────────────────────
+  {
+    id: 'goldsworthy_shay_gap',
+    from: 'goldsworthy', to: 'shay_gap',
+    owner: 'bhp', voltage: 66, circuit: 'single', built: true,
+  },
+
+  // ── BHP ───────────────────────────────────────────────────────
+  {
+    id: 'newman_yandicoogina',
+    from: 'newman', to: 'yandicoogina',
+    owner: 'bhp', voltage: 132, circuit: 'single', built: true,
+  },
+  {
+    id: 'newman_hope_downs',
+    from: 'newman', to: 'hope_downs',
+    owner: 'bhp', voltage: 132, circuit: 'double', built: true,
+  },
+
+];
+
+
+// ═══════════════════════════════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════════════════════════════
+const map = L.map('map', {
+  center: [-21.8, 119.2],
+  zoom: 7,
+  zoomControl: true,
+});
+
+// Basemap tile layers — if one doesn't load, use the sidebar switcher to try another.
+const TILE_LAYERS = {
+  carto_dark: L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}.png',
+    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
+  ),
+  esri_dark: L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 }
+  ),
+  carto_light: L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
+  ),
+  osm: L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', subdomains: 'abc', maxZoom: 19 }
+  ),
+};
+
+let activeBasemap = TILE_LAYERS.carto_dark;
+activeBasemap.addTo(map);
+
+function setBasemap(key, btn) {
+  map.removeLayer(activeBasemap);
+  activeBasemap = TILE_LAYERS[key];
+  activeBasemap.addTo(map);
+  // Ensure network layers stay on top
+  Object.values(layerGroups).forEach(lg => lg.bringToFront ? lg.bringToFront() : null);
+  document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// One layer group per owner
+const layerGroups = {};
+Object.keys(OWNERS).forEach(key => {
+  layerGroups[key] = L.layerGroup().addTo(map);
+});
+
+
+// ═══════════════════════════════════════════════════════════════════
+// NODE ICON FACTORY
+// ═══════════════════════════════════════════════════════════════════
+const NODE_SIZE = 46;  // px diameter
+
+function typeIcon(typeKey, size, color) {
+  const t = NODE_TYPES[typeKey];
+  return t ? makeSvg(t.path, size, color, t.fillRule) : '';
+}
+
+function buildIconsHtml(types, color) {
+  const n = types.length;
+
+  if (n === 1) {
+    return `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(types[0], 20, color)}</div>`;
+  }
+
+  if (n === 2) {
+    const svgs = types.map(t => typeIcon(t, 14, color));
+    return `<div style="display:flex;align-items:center;justify-content:center;gap:3px;width:100%;height:100%;">${svgs.join('')}</div>`;
+  }
+
+  // 3 types: top + bottom row
+  const svgs = types.map(t => typeIcon(t, 12, color));
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:100%;height:100%;">
+    <div>${svgs[0]}</div>
+    <div style="display:flex;gap:3px;">${svgs.slice(1).join('')}</div>
+  </div>`;
+}
+
+function createNodeIcon(owner, types, proposed) {
+  const color       = OWNERS[owner]?.color || '#555';
+  const inner       = buildIconsHtml(types, color);
+  const S           = NODE_SIZE;
+  const borderStyle = proposed ? 'dashed' : 'solid';
+
+  const html = `
+    <div style="
+      width:${S}px; height:${S}px;
+      border-radius:50%;
+      border:3px ${borderStyle} ${color};
+      background:rgba(13,17,23,0.88);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      box-shadow:0 0 0 1px rgba(0,0,0,0.4), 0 0 14px ${color}55;
+      transition:box-shadow 0.15s;
+    "
+    onmouseenter="this.style.boxShadow='0 0 0 1px rgba(0,0,0,0.4), 0 0 22px ${color}BB'"
+    onmouseleave="this.style.boxShadow='0 0 0 1px rgba(0,0,0,0.4), 0 0 14px ${color}55'"
+    >${inner}</div>`;
+
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize:   [S, S],
+    iconAnchor: [S / 2, S / 2],
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+const nodeIndex = {};  // id → node data
+
+function renderNodes() {
+  nodes.forEach(node => {
+    nodeIndex[node.id] = node;
+
+    const icon    = createNodeIcon(node.owner, node.types, node.proposed);
+    const ownerColor = OWNERS[node.owner]?.color || '#888';
+    const typeLabels = node.types.map(t => NODE_TYPES[t]?.label || t).join(' · ');
+    const proposedLine = node.proposed
+      ? `<div class="tip-status proposed">Proposed — not yet built</div>` : '';
+
+    const marker = L.marker(node.coords, { icon, zIndexOffset: 200 });
+
+    // Hover tooltip — shows name, types, owner
+    // (Leaflet only supports one tooltip per marker; we use this for hover.
+    //  Permanent labels are rendered as a separate label marker below.)
+    marker.bindTooltip(
+      `<div class="tip-name">${node.name}</div>`
+      + `<div class="tip-types">${typeLabels}</div>`
+      + proposedLine
+      + `<div class="tip-owner" style="color:${ownerColor}">${OWNERS[node.owner]?.name || node.owner}</div>`,
+      {
+        className:  'node-hover-tip',
+        direction:  'top',
+        offset:     [0, -NODE_SIZE / 2 - 4],
+        opacity:    1,
+        sticky:     false,
+      }
+    );
+
+    // Permanent label — a separate invisible marker carrying a permanent tooltip
+    const labelMarker = L.marker(node.coords, {
+      icon: L.divIcon({ html: '', className: '', iconSize: [0, 0] }),
+      interactive: false,
+      zIndexOffset: 100,
+    });
+    labelMarker.bindTooltip(node.name, {
+      className:  'node-label',
+      permanent:  true,
+      direction:  'bottom',
+      offset:     [0, NODE_SIZE / 2 - 2],
+      opacity:    1,
+    });
+    layerGroups[node.owner]?.addLayer(labelMarker);
+
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      openInfoPanel(node);
+    });
+
+    layerGroups[node.owner]?.addLayer(marker);
+  });
+}
+
+// Voltage → line weight
+const VOLTAGE_WEIGHT = { 330: 5.5, 220: 3.5, 132: 2.5, 66: 1.5 };
+function voltWeight(v) { return VOLTAGE_WEIGHT[v] ?? 2; }
+
+// Perpendicular lateral offset (degrees) on a straight line segment
+function offsetLine(fromCoords, toCoords, deg) {
+  const [lat1, lng1] = fromCoords;
+  const [lat2, lng2] = toCoords;
+  const dlat = lat2 - lat1, dlng = lng2 - lng1;
+  const len  = Math.sqrt(dlat * dlat + dlng * dlng) || 1;
+  // Perpendicular unit vector (90° CCW rotation): (-dlng, dlat) / len
+  const pLat = -dlng / len * deg;
+  const pLng =  dlat / len * deg;
+  return [[lat1 + pLat, lng1 + pLng], [lat2 + pLat, lng2 + pLng]];
+}
+
+function addLineTooltip(line, conn, from, to, color) {
+  const voltStr   = conn.voltage ? `${conn.voltage} kV` : 'Voltage unknown';
+  const circStr   = conn.circuit === 'double' ? 'Double circuit'
+                  : conn.circuit === 'single' ? 'Single circuit'
+                  : 'Circuit unknown';
+  const statusStr = conn.built ? 'In service' : 'Proposed — not yet built';
+  const ownerName = OWNERS[conn.owner]?.name || conn.owner;
+  line.bindTooltip(
+    `<div class="tip-name">${from.name} → ${to.name}</div>`
+    + `<div class="tip-types">${voltStr} · ${circStr}</div>`
+    + `<div class="tip-status ${conn.built ? 'built' : 'proposed'}">${statusStr}</div>`
+    + `<div class="tip-owner" style="color:${color}">${ownerName}</div>`,
+    { className: 'node-hover-tip', sticky: true, opacity: 1 }
+  );
+}
+
+// Gap between the two rails of a double-circuit line (degrees lat/lng)
+const DOUBLE_GAP = 0.009;
+
+function renderConnections() {
+  // Render built (solid) lines before unbuilt (dashed) so dashed appear on top
+  const sorted = [...connections].sort((a, b) => (b.built ? 1 : 0) - (a.built ? 1 : 0));
+
+  sorted.forEach(conn => {
+    const from = nodeIndex[conn.from];
+    const to   = nodeIndex[conn.to];
+    if (!from || !to) {
+      console.warn(`Connection "${conn.id}": node not found.`);
+      return;
+    }
+
+    const color    = OWNERS[conn.owner]?.color || '#555';
+    const weight   = conn.built ? voltWeight(conn.voltage) : 2;
+    const opacity  = conn.built ? 0.82 : 0.58;
+    const dashArr  = conn.built ? null : '10 7';
+    const manualOff = conn.manualOffset || 0;
+
+    if (conn.circuit === 'double' && conn.built) {
+      // Two parallel rails — each offset ±DOUBLE_GAP/2 from centre
+      [-DOUBLE_GAP / 2, +DOUBLE_GAP / 2].forEach(gap => {
+        const totalOff = gap + manualOff;
+        const coords = offsetLine(from.coords, to.coords, totalOff);
+        const line = L.polyline(coords, { color, weight, opacity, dashArray: null });
+        addLineTooltip(line, conn, from, to, color);
+        layerGroups[conn.owner]?.addLayer(line);
+      });
+    } else {
+      // Single line (optionally offset for parallel routes)
+      const coords = manualOff !== 0
+        ? offsetLine(from.coords, to.coords, manualOff)
+        : [from.coords, to.coords];
+      const line = L.polyline(coords, { color, weight, opacity, dashArray: dashArr });
+      addLineTooltip(line, conn, from, to, color);
+      layerGroups[conn.owner]?.addLayer(line);
+    }
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// LAYER TOGGLES (sidebar)
+// ═══════════════════════════════════════════════════════════════════
+const hiddenOwners = new Set();
+
+function buildOwnerToggles() {
+  const container = document.getElementById('owner-list');
+
+  Object.entries(OWNERS).forEach(([key, owner]) => {
+    const count = nodes.filter(n => n.owner === key).length;
+
+    const item = document.createElement('div');
+    item.className   = 'owner-item';
+    item.dataset.key = key;
+    item.innerHTML   = `
+      <div class="owner-swatch" style="background:${owner.color}"></div>
+      <span class="owner-label">${owner.name}</span>
+      ${count > 0 ? `<span class="owner-count">${count}</span>` : ''}
+    `;
+
+    item.addEventListener('click', () => {
+      if (hiddenOwners.has(key)) {
+        hiddenOwners.delete(key);
+        item.classList.remove('hidden');
+        map.addLayer(layerGroups[key]);
+      } else {
+        hiddenOwners.add(key);
+        item.classList.add('hidden');
+        map.removeLayer(layerGroups[key]);
+      }
+    });
+
+    container.appendChild(item);
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// TYPE LEGEND (sidebar)
+// ═══════════════════════════════════════════════════════════════════
+function buildTypeLegend() {
+  const container = document.getElementById('type-legend');
+
+  Object.entries(NODE_TYPES).forEach(([, type]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <div class="legend-circle">
+        ${makeSvg(type.path, 16, '#6e7681', type.fillRule)}
+      </div>
+      <span class="legend-label">${type.label}</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// INFO PANEL
+// ═══════════════════════════════════════════════════════════════════
+function openInfoPanel(node) {
+  const ownerData  = OWNERS[node.owner];
+  const color      = ownerData?.color || '#555';
+  const typeLabels = node.types.map(t => NODE_TYPES[t]?.label || t).join(' · ');
+
+  const typeTags = node.types.map(t => {
+    const svg = makeSvg(NODE_TYPES[t]?.path || '', 12, '#c9d1d9');
+    return `<span class="type-tag">${svg}${NODE_TYPES[t]?.label || t}</span>`;
+  }).join('');
+
+  const detailRows = Object.entries(node.details || {}).map(([k, v]) =>
+    `<div class="info-detail-row">
+      <span class="detail-key">${k}</span>
+      <span class="detail-value">${v}</span>
+    </div>`
+  ).join('');
+
+  const proposedBadge = node.proposed
+    ? `<span class="info-owner-tag" style="background:#d2922222;color:#d29222;border:1px solid #d2922255;margin-left:4px;">Proposed</span>`
+    : '';
+
+  document.getElementById('info-content').innerHTML = `
+    <h2>${node.name}</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+      <span class="info-owner-tag" style="background:${color}22;color:${color};border:1px solid ${color}55;">
+        ${ownerData?.name || node.owner}
+      </span>${proposedBadge}
+    </div>
+    <div class="info-type-tags">${typeTags}</div>
+    ${detailRows ? `<hr class="info-divider"><div>${detailRows}</div>` : ''}
+    ${node.notes ? `<p class="info-notes">${node.notes}</p>` : ''}
+  `;
+
+  document.getElementById('info-panel').classList.add('open');
+}
+
+function closeInfoPanel() {
+  document.getElementById('info-panel').classList.remove('open');
+}
+
+map.on('click', closeInfoPanel);
+
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
+buildOwnerToggles();
+buildTypeLegend();
+renderNodes();          // must run before renderConnections (builds nodeIndex)
+renderConnections();
+
+</script>
+</body>
+</html>
