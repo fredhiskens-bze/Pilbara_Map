@@ -416,10 +416,8 @@
 
   <div class="sidebar-section">
     <h3>Basemap</h3>
-    <button class="basemap-btn active" onclick="setBasemap('carto_dark',this)">CartoDB Dark</button>
-    <button class="basemap-btn"        onclick="setBasemap('esri_dark',this)">ESRI Dark Grey</button>
+    <button class="basemap-btn active" onclick="setBasemap('esri_dark',this)">ESRI Dark Grey</button>
     <button class="basemap-btn"        onclick="setBasemap('carto_light',this)">CartoDB Light</button>
-    <button class="basemap-btn"        onclick="setBasemap('osm',this)">OpenStreetMap</button>
   </div>
 
   <div id="color-note">
@@ -453,6 +451,7 @@ const OWNERS = {
   bhp:           { name: 'BHP',            color: '#e35302' },
   roy_hill:      { name: 'Roy Hill',       color: '#7A5C3A' },
   areh:          { name: 'Aust. Renewable Energy Hub', color: '#00FFFF' },
+  yec:           { name: 'Yindjibarndi Energy Corp.', color: '#2D6A2D' },
   common:        { name: 'Other',          color: '#444444' },
 };
 
@@ -477,10 +476,8 @@ const NODE_TYPES = {
   },
   mine: {
     label: 'Mine',
-    // Pickaxe: thin bar + open bracket arc (evenodd hollows out the inside of the arc)
-    // Outer shape: bar + large D; inner path: hollow cutout → gives a ---)  look
-    path: 'M2 11 L12 11 L12 6 C26 6 26 18 12 18 L12 13 L2 13 Z M12 9 C20 9 20 15 12 15 Z',
-    fillRule: 'evenodd',
+    // Ore chunk: chunky jagged rock with alternating juts and notches
+    path: 'M11 1 L16 2 L22 6 L21 11 L23 16 L18 21 L12 23 L6 21 L1 16 L3 11 L1 5 L7 2 Z',
   },
 };
 
@@ -518,11 +515,20 @@ const nodes = [
   // ── COMMON USER ────────────────────────────────────────────────
   {
     id:     'port_hedland',
-    name:   'Port Hedland',
+    name:   'Boodarie',
     owner:  'common',
     types:  ['generation', 'load', 'storage'],
-    coords: [-20.426242, 118.561198],
+    coords: [-20.428559, 118.550105],
     details: { 'Type': 'Regional hub' },
+    notes:  '',
+  },
+  {
+    id:     'port_hedland_town',
+    name:   'Port Hedland',
+    owner:  'common',
+    types:  ['load'],
+    coords: [-20.340250, 118.581729],
+    details: {},
     notes:  '',
   },
 
@@ -533,6 +539,15 @@ const nodes = [
     owner:  'fortescue',
     types:  ['generation', 'storage'],
     coords: [-21.237437, 118.802026],
+    details: {},
+    notes:  '',
+  },
+  {
+    id:     'fmg_coast',
+    name:   'FMG Coast',
+    owner:  'fortescue',
+    types:  ['load'],
+    coords: [-20.422500, 118.567066],
     details: {},
     notes:  '',
   },
@@ -646,6 +661,18 @@ const nodes = [
     notes:    '',
   },
 
+  // ── YEC ───────────────────────────────────────────────────────
+  {
+    id:      'yindjibarndi_reh',
+    name:    'Yindjibarndi Renewable Energy Hub',
+    owner:   'yec',
+    types:   ['generation'],
+    coords:  [-21.277058, 116.875797],
+    details: {},
+    notes:   '',
+    proposed: true,
+  },
+
   // ── APA ───────────────────────────────────────────────────────
   {
     id:       'newman_reh',
@@ -687,6 +714,7 @@ const nodes = [
     coords:  [-20.875390, 118.442949],
     details: { 'Type': 'Mine' },
     notes:   '',
+    proposed: true,
   },
   {
     id:      'wallareenya',
@@ -696,6 +724,196 @@ const nodes = [
     coords:  [-20.883073, 118.855383],
     details: {},
     notes:   '',
+    proposed: true,
+  },
+  {
+    id:      'ridley_magnetite',
+    name:    'Ridley Magnetite',
+    owner:   'common',
+    types:   ['mine', 'generation'],
+    coords:  [-20.258764, 119.040053],
+    details: {},
+    notes:   '',
+    proposed: true,
+  },
+
+  // ── WESTERN POWER ─────────────────────────────────────────────
+  {
+    id:      'wp_cape_lambert',
+    name:    'WP Cape Lambert',
+    owner:   'western_power',
+    types:   [],
+    coords:  [-20.653625, 117.139201],
+    details: {},
+    notes:   '',
+  },
+
+  // ── RIO TINTO ─────────────────────────────────────────────────
+  {
+    id:      'rio_cape_lambert',
+    name:    'Rio Cape Lambert',
+    owner:   'rio_tinto',
+    types:   ['generation', 'load'],
+    coords:  [-20.648973, 117.141029],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'maitland',
+    name:    'Maitland',
+    owner:   'rio_tinto',
+    types:   ['generation'],
+    coords:  [-20.762415, 116.741030],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'dampier',
+    name:    'Dampier',
+    owner:   'rio_tinto',
+    types:   ['load'],
+    coords:  [-20.648957, 116.722066],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'millstream_hub',
+    name:    'Millstream Hub',
+    owner:   'rio_tinto',
+    types:   [],
+    coords:  [-21.243463, 116.974640],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'pannawonica',
+    name:    'Pannawonica',
+    owner:   'rio_tinto',
+    types:   [],
+    coords:  [-21.680047, 116.464325],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'brockman',
+    name:    'Brockman',
+    owner:   'rio_tinto',
+    types:   ['mine'],
+    coords:  [-22.439667, 117.298493],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'tom_price',
+    name:    'Tom Price',
+    owner:   'rio_tinto',
+    types:   ['mine', 'storage'],
+    coords:  [-22.735894, 117.776257],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'paraburdoo',
+    name:    'Paraburdoo',
+    owner:   'rio_tinto',
+    types:   ['generation', 'mine'],
+    coords:  [-23.223679, 117.613424],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'marandoo',
+    name:    'Marandoo',
+    owner:   'rio_tinto',
+    types:   ['mine'],
+    coords:  [-22.610643, 118.076176],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'juna_downs',
+    name:    'Juna Downs',
+    owner:   'rio_tinto',
+    types:   [],
+    coords:  [-22.863373, 118.731489],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'west_angelas',
+    name:    'West Angelas',
+    owner:   'rio_tinto',
+    types:   ['mine', 'generation'],
+    coords:  [-23.148923, 118.719231],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'koodaideri',
+    name:    'Koodaideri',
+    owner:   'rio_tinto',
+    types:   [],
+    coords:  [-22.561705, 119.009559],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'yandi',
+    name:    'Yandi',
+    owner:   'rio_tinto',
+    types:   [],
+    coords:  [-22.797447, 119.133562],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'hope_downs_1',
+    name:    'Hope Downs 1',
+    owner:   'rio_tinto',
+    types:   ['mine'],
+    coords:  [-22.938190, 119.086966],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'hope_downs_4',
+    name:    'Hope Downs 4',
+    owner:   'rio_tinto',
+    types:   ['mine'],
+    coords:  [-23.116156, 119.502470],
+    details: {},
+    notes:   '',
+  },
+
+  // ── OTHER ─────────────────────────────────────────────────────
+  {
+    id:      'karratha',
+    name:    'Karratha',
+    owner:   'common',
+    types:   ['generation'],
+    coords:  [-20.762388, 116.834971],
+    details: {},
+    notes:   '',
+  },
+  {
+    id:      'ngarluma_gep',
+    name:    'Ngarluma Green Energy Park',
+    owner:   'common',
+    types:   ['generation'],
+    coords:  [-20.783462, 116.932365],
+    details: {},
+    notes:   '',
+    proposed: true,
+  },
+  {
+    id:      'burrup',
+    name:    'Burrup',
+    owner:   'common',
+    types:   ['load', 'generation'],
+    coords:  [-20.621734, 116.770262],
+    details: {},
+    notes:   '',
+    proposed: true,
   },
 
   // ── BHP ───────────────────────────────────────────────────────
@@ -731,8 +949,8 @@ const connections = [
 
   // ── FORTESCUE ─────────────────────────────────────────────────
   {
-    id: 'hedland_north_star',
-    from: 'port_hedland', to: 'north_star_junction',
+    id: 'fmg_coast_north_star',
+    from: 'fmg_coast', to: 'north_star_junction',
     owner: 'fortescue', voltage: 220, circuit: 'single', built: true,
   },
   {
@@ -764,6 +982,7 @@ const connections = [
     id: 'north_star_cloudbreak',
     from: 'north_star_junction', to: 'cloudbreak',
     owner: 'fortescue', voltage: null, circuit: null, built: false,
+    manualOffset: -0.011,
   },
 
   // ── APA ───────────────────────────────────────────────────────
@@ -811,25 +1030,154 @@ const connections = [
     owner: 'areh', voltage: 330, circuit: null, built: false,
   },
 
+  // ── OTHER (proposed) ──────────────────────────────────────────
+  {
+    id: 'ngarluma_karratha',
+    from: 'ngarluma_gep', to: 'karratha',
+    owner: 'common', voltage: null, circuit: null, built: false,
+  },
+
+  // ── YEC (proposed) ────────────────────────────────────────────
+  {
+    id: 'yindjibarndi_karratha',
+    from: 'yindjibarndi_reh', to: 'karratha',
+    owner: 'yec', voltage: null, circuit: null, built: false,
+  },
+
   // ── APA (Hemi Gold) ───────────────────────────────────────────
+  {
+    id: 'karratha_burrup',
+    from: 'karratha', to: 'burrup',
+    owner: 'apa', voltage: null, circuit: null, built: false,
+  },
   {
     id: 'hedland_hemi_gold',
     from: 'port_hedland', to: 'hemi_gold',
     owner: 'apa', voltage: 330, circuit: 'double', built: false,
   },
 
+  // ── APA ───────────────────────────────────────────────────────
+  {
+    id: 'boodarie_port_hedland',
+    from: 'port_hedland', to: 'port_hedland_town',
+    owner: 'apa', voltage: 66, circuit: 'single', built: true,
+  },
+
   // ── OTHER ─────────────────────────────────────────────────────
+  {
+    id: 'boodarie_ridley',
+    from: 'port_hedland', to: 'ridley_magnetite',
+    owner: 'common', voltage: null, circuit: null, built: false,
+  },
   {
     id: 'hedland_wallareenya',
     from: 'port_hedland', to: 'wallareenya',
-    owner: 'common', voltage: null, circuit: null, built: false,
+    owner: 'apa', voltage: null, circuit: null, built: false,
+  },
+  {
+    id: 'wallareenya_north_star',
+    from: 'wallareenya', to: 'north_star_junction',
+    owner: 'apa', voltage: null, circuit: null, built: false,
+  },
+  {
+    id: 'wallareenya_north_star_cloudbreak',
+    from: 'north_star_junction', to: 'cloudbreak',
+    owner: 'apa', voltage: null, circuit: null, built: false,
+    manualOffset: +0.011,
   },
 
   // ── WESTERN POWER ─────────────────────────────────────────────
   {
+    id: 'boodarie_wp_cape_lambert',
+    from: 'port_hedland', to: 'wp_cape_lambert',
+    owner: 'western_power', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'wp_cape_lambert_karratha',
+    from: 'wp_cape_lambert', to: 'karratha',
+    owner: 'western_power', voltage: 220, circuit: 'single', built: true,
+  },
+  {
     id: 'hedland_goldsworthy',
     from: 'port_hedland', to: 'goldsworthy',
     owner: 'western_power', voltage: 66, circuit: 'single', built: true,
+  },
+
+  // ── RIO TINTO ─────────────────────────────────────────────────
+  {
+    id: 'rio_cape_lambert_maitland',
+    from: 'rio_cape_lambert', to: 'maitland',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'maitland_dampier',
+    from: 'maitland', to: 'dampier',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'maitland_millstream',
+    from: 'maitland', to: 'millstream_hub',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'millstream_rio_cape_lambert',
+    from: 'millstream_hub', to: 'rio_cape_lambert',
+    owner: 'rio_tinto', voltage: 132, circuit: 'single', built: true,
+  },
+  {
+    id: 'millstream_pannawonica',
+    from: 'millstream_hub', to: 'pannawonica',
+    owner: 'rio_tinto', voltage: 132, circuit: 'single', built: true,
+  },
+  {
+    id: 'millstream_brockman',
+    from: 'millstream_hub', to: 'brockman',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'brockman_tom_price',
+    from: 'brockman', to: 'tom_price',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'tom_price_paraburdoo',
+    from: 'tom_price', to: 'paraburdoo',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'tom_price_marandoo',
+    from: 'tom_price', to: 'marandoo',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'marandoo_juna_downs',
+    from: 'marandoo', to: 'juna_downs',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'juna_downs_west_angelas',
+    from: 'juna_downs', to: 'west_angelas',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'juna_downs_koodaideri',
+    from: 'juna_downs', to: 'koodaideri',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'koodaideri_yandi',
+    from: 'koodaideri', to: 'yandi',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'yandi_hope_downs_1',
+    from: 'yandi', to: 'hope_downs_1',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
+  },
+  {
+    id: 'hope_downs_1_hope_downs_4',
+    from: 'hope_downs_1', to: 'hope_downs_4',
+    owner: 'rio_tinto', voltage: 220, circuit: 'single', built: true,
   },
 
   // ── BHP ───────────────────────────────────────────────────────
@@ -865,10 +1213,6 @@ const map = L.map('map', {
 
 // Basemap tile layers — if one doesn't load, use the sidebar switcher to try another.
 const TILE_LAYERS = {
-  carto_dark: L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}.png',
-    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
-  ),
   esri_dark: L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     { attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ', maxZoom: 16 }
@@ -877,13 +1221,9 @@ const TILE_LAYERS = {
     'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
     { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>', subdomains: 'abcd', maxZoom: 19 }
   ),
-  osm: L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', subdomains: 'abc', maxZoom: 19 }
-  ),
 };
 
-let activeBasemap = TILE_LAYERS.carto_dark;
+let activeBasemap = TILE_LAYERS.esri_dark;
 activeBasemap.addTo(map);
 
 function setBasemap(key, btn) {
@@ -915,6 +1255,8 @@ function typeIcon(typeKey, size, color) {
 
 function buildIconsHtml(types, color) {
   const n = types.length;
+
+  if (n === 0) return '';
 
   if (n === 1) {
     return `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${typeIcon(types[0], 20, color)}</div>`;
@@ -985,7 +1327,7 @@ function renderNodes() {
     //  Permanent labels are rendered as a separate label marker below.)
     marker.bindTooltip(
       `<div class="tip-name">${node.name}</div>`
-      + `<div class="tip-types">${typeLabels}</div>`
+      + (typeLabels ? `<div class="tip-types">${typeLabels}</div>` : '')
       + proposedLine
       + `<div class="tip-owner" style="color:${ownerColor}">${OWNERS[node.owner]?.name || node.owner}</div>`,
       {
